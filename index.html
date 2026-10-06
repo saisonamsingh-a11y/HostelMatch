@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HostelMatch – Smart Hostel Recommendation System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root[data-theme="light"] {
+  --bg: #F8FAFC;
+  --panel: #FFFFFF;
+  --ink: #0F172A;
+  --mute: #64748B;
+  --line: #E2E8F0;
+  --primary: #0D9488;
+  --primary-hover: #0F766E;
+  --primary-subtle: #CCFBF1;
+  --accent: #F59E0B;
+  --card-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.01);
+  --glass: rgba(255, 255, 255, 0.85);
+  --header-bg: #0F172A;
+}
+
+:root[data-theme="dark"] {
+  --bg: #090D16;
+  --panel: #131C2E;
+  --ink: #F8FAFC;
+  --mute: #94A3B8;
+  --line: #1E293B;
+  --primary: #14B8A6;
+  --primary-hover: #2DD4BF;
+  --primary-subtle: #112F35;
+  --accent: #FBBF24;
+  --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+  --glass: rgba(19, 28, 46, 0.85);
+  --header-bg: #0B1120;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;transition:background-color .25s ease,border-color .25s ease,color .25s ease}
+body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+
+/* Header & Navbar */
+header{background:var(--header-bg);color:#fff;padding:24px 20px;position:relative;overflow:hidden;border-bottom:1px solid rgba(255,255,255,0.08)}
+header::before{content:'';position:absolute;top:-50%;right:-10%;width:500px;height:500px;background:radial-gradient(circle,rgba(20,184,166,0.15) 0%,transparent 70%);pointer-events:none}
+.nav-bar{max-width:1240px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:#fff}
+.brand-logo{width:42px;height:42px;background:linear-gradient(135deg,var(--primary),#3B82F6);border-radius:12px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:1.3rem;box-shadow:0 4px 12px rgba(13,148,136,0.3)}
+.brand h1{font-family:'Space Grotesk',sans-serif;font-size:1.6rem;font-weight:700;letter-spacing:-0.03em}
+.header-actions{display:flex;gap:10px;align-items:center}
+.btn-icon{background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.15);padding:8px 14px;border-radius:10px;font-size:0.9rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;backdrop-filter:blur(8px)}
+.btn-icon:hover{background:rgba(255,255,255,0.2)}
+
+/* Hero Banner */
+.hero-content{max-width:1240px;margin:0 auto;padding:10px 0 14px}
+.hero-title{font-family:'Space Grotesk',sans-serif;font-size:clamp(1.8rem,4vw,2.7rem);font-weight:700;line-height:1.2;margin-bottom:10px;background:linear-gradient(to right,#FFFFFF,#CBD5E1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-subtitle{color:#94A3B8;font-size:1.05rem;max-width:620px;margin-bottom:24px;line-height:1.6}
+
+/* Search Bar & Gender Filters */
+.search-banner{display:flex;gap:12px;flex-wrap:wrap;max-width:820px}
+.search-input-wrap{flex:1;min-width:240px;position:relative}
+.search-input-wrap input{width:100%;padding:12px 16px 12px 42px;border-radius:12px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;font:inherit;outline:none}
+.search-input-wrap input::placeholder{color:#94A3B8}
+.search-input-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);fill:#94A3B8;width:18px;height:18px}
+.gender-pills{display:flex;gap:6px;background:rgba(255,255,255,0.08);padding:4px;border-radius:12px;border:1px solid rgba(255,255,255,0.15)}
+.gender-pill{padding:8px 14px;border-radius:8px;font-size:0.85rem;font-weight:600;color:#94A3B8;cursor:pointer;user-select:none}
+.gender-pill.active{background:var(--primary);color:#fff}
+
+/* Main App Layout */
+.wrap{max-width:1240px;margin:24px auto;padding:0 20px;display:grid;grid-template-columns:340px 1fr;gap:24px}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}}
+
+/* Form Sidebar */
+form{background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:var(--card-shadow);position:sticky;top:20px}
+.form-title{font-size:1.15rem;font-weight:700;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center}
+.form-title span{font-size:0.85rem;color:var(--primary);cursor:pointer;font-weight:600}
+.field-group{margin-bottom:20px}
+.field-label{display:flex;justify-content:space-between;font-weight:600;font-size:0.9rem;margin-bottom:8px}
+.val-badge{color:var(--primary);font-weight:800;background:var(--primary-subtle);padding:2px 8px;border-radius:6px}
+input[type=range]{width:100%;accent-color:var(--primary);height:6px;border-radius:3px;background:var(--line)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips label input{position:absolute;opacity:0;pointer-events:none}
+.chips label span{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;background:var(--panel);user-select:none}
+.chips label input:checked + span{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 4px 10px rgba(13,148,136,0.25)}
+.btn-submit{width:100%;padding:14px;background:linear-gradient(135deg,var(--primary),#0F766E);color:#fff;border:0;border-radius:12px;font-weight:700;font-size:1rem;cursor:pointer;box-shadow:0 4px 14px rgba(13,148,136,0.3);margin-top:10px}
+.btn-submit:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(13,148,136,0.4)}
+
+/* Control Bar */
+.control-bar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:18px;background:var(--panel);padding:12px 18px;border-radius:14px;border:1px solid var(--line);box-shadow:var(--card-shadow)}
+.tabs{display:flex;gap:6px}
+.tab-btn{padding:8px 16px;border-radius:10px;font-weight:600;font-size:0.9rem;border:0;background:transparent;color:var(--mute);cursor:pointer;display:flex;align-items:center;gap:6px}
+.tab-btn.active{background:var(--primary-subtle);color:var(--primary)}
+.sort-select{padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-weight:600;font-size:0.85rem;outline:none}
+
+/* Result Cards Grid */
+.results-grid{display:grid;gap:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--card-shadow);display:grid;grid-template-columns:140px 1fr auto;gap:20px;position:relative;overflow:hidden}
+@media(max-width:640px){.card{grid-template-columns:1fr}.card-actions{flex-direction:row}}
+.card:hover{border-color:var(--primary);transform:translateY(-2px)}
+.card-img-wrap{position:relative;border-radius:12px;overflow:hidden;height:120px;background:var(--line)}
+.card-img-wrap img{width:100%;height:100%;object-fit:cover}
+.badge-verified{position:absolute;top:6px;left:6px;background:rgba(15,23,42,0.8);color:#2DD4BF;font-size:0.7rem;font-weight:700;padding:3px 6px;border-radius:6px;backdrop-filter:blur(4px);display:flex;align-items:center;gap:4px}
+.badge-gender{position:absolute;bottom:6px;right:6px;background:rgba(15,23,42,0.8);color:#fff;font-size:0.7rem;font-weight:700;padding:3px 8px;border-radius:6px;text-transform:uppercase}
+.card-body h3{font-size:1.2rem;font-weight:700;margin-bottom:4px}
+.card-meta{font-size:0.88rem;color:var(--mute);margin-bottom:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.card-price{font-size:1.15rem;font-weight:800;color:var(--primary);margin-bottom:10px}
+.amenities-list{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:0.78rem;font-weight:600;padding:3px 8px;border-radius:6px;background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.tag.miss{background:#FEF2F2;color:#991B1B;border-color:#FCA5A5}
+.card-side{display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end}
+@media(max-width:640px){.card-side{align-items:stretch;gap:14px}}
+
+/* Donut Gauge */
+.match-gauge{position:relative;width:68px;height:68px;display:grid;place-items:center}
+.match-gauge svg{width:100%;height:100%;transform:rotate(-90deg)}
+.match-gauge circle{fill:none;stroke-width:6;stroke-linecap:round}
+.match-bg{stroke:var(--line)}
+.match-val{stroke:var(--primary);transition:stroke-dashoffset 0.8s ease}
+.match-text{position:absolute;font-size:1.05rem;font-weight:800;font-family:'Space Grotesk',sans-serif}
+
+/* Card Actions */
+.card-actions{display:flex;flex-direction:column;gap:8px;width:100%}
+.btn-action{padding:8px 14px;border-radius:10px;font-weight:600;font-size:0.85rem;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-action:hover{background:var(--bg)}
+.btn-action.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn-action.saved{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* Comparison Drawer Modal */
+.comp-bar{position:fixed;bottom:20px;right:20px;background:var(--header-bg);color:#fff;padding:14px 20px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,0.3);display:flex;align-items:center;gap:16px;z-index:99;display:none}
+
+/* Dialog Modals */
+dialog{max-width:600px;width:calc(100% - 32px);padding:24px;border-radius:20px;border:1px solid var(--line);background:var(--panel);color:var(--ink);box-shadow:0 25px 50px -12px rgba(0,0,0,0.25)}
+dialog::backdrop{background:rgba(15,23,42,0.6);backdrop-filter:blur(6px)}
+.modal-header{display:flex;justify-content:space-between;align-items:start;margin-bottom:16px}
+.modal-close{background:transparent;border:0;font-size:1.4rem;cursor:pointer;color:var(--mute)}
+
+/* Toast Notifications */
+#toast-container{position:fixed;top:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:10px}
+.toast{background:var(--header-bg);color:#fff;padding:12px 18px;border-radius:10px;font-size:0.9rem;font-weight:600;box-shadow:0 10px 25px rgba(0,0,0,0.2);display:flex;align-items:center;gap:10px;animation:slideIn 0.3s ease}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* Map */
+#map{height:540px;border-radius:16px;border:1px solid var(--line)}
+
+/* Empty state */
+.empty-box{text-align:center;padding:48px 20px;background:var(--panel);border:2px dashed var(--line);border-radius:16px;color:var(--mute)}
+</style>
+</head>
+<body>
+
+<header>
+ <div class="nav-bar">
+  <a href="/" class="brand">
+   <div class="brand-logo">H</div>
+   <h1>HostelMatch</h1>
+  </a>
+  <div class="header-actions">
+   <button class="btn-icon" id="themeToggle" type="button" aria-label="Toggle Theme">
+    <span id="themeIcon">🌙</span> <span id="themeLabel">Dark Mode</span>
+   </button>
+   <button class="btn-icon" onclick="openCompModal()" type="button">
+    ⚖️ Compare (<span id="compCount">0</span>)
+   </button>
+   <a href="/admin" class="btn-icon" style="text-decoration:none">⚙️ Admin</a>
+  </div>
+ </div>
+
+ <div class="hero-content">
+  <h2 class="hero-title">Find Your Ideal Student Stay Around Campus</h2>
+  <p class="hero-subtitle">Smart 5-Factor algorithm matching your monthly budget, commute distance, preferred room type, and must-have amenities.</p>
+  
+  <div class="search-banner">
+   <div class="search-input-wrap">
+    <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+    <input type="text" id="qSearch" placeholder="Search by hostel name, area, or description...">
+   </div>
+   <div class="gender-pills">
+    <div class="gender-pill active" onclick="setGenderFilter('',this)">All</div>
+    <div class="gender-pill" onclick="setGenderFilter('coed',this)">Co-Ed</div>
+    <div class="gender-pill" onclick="setGenderFilter('boys',this)">Boys</div>
+    <div class="gender-pill" onclick="setGenderFilter('girls',this)">Girls</div>
+   </div>
+  </div>
+ </div>
+</header>
+
+<div class="wrap">
+ <form id="prefForm" aria-label="Preferences">
+  <div class="form-title">
+   Match Preferences
+   <span onclick="resetFilters()">Reset All</span>
+  </div>
+  
+  <div class="field-group">
+   <div class="field-label">
+    <span>Monthly Budget</span>
+    <span class="val-badge" id="bv">₹10,000</span>
+   </div>
+   <input type="range" id="budget" min="3000" max="20000" step="500" value="10000">
+  </div>
+
+  <div class="field-group">
+   <div class="field-label">
+    <span>Max Commute</span>
+    <span class="val-badge" id="dv">3 km</span>
+   </div>
+   <input type="range" id="dist" min="0.5" max="8" step="0.5" value="3">
+  </div>
+
+  <div class="field-group">
+   <div class="field-label">Room Type</div>
+   <div class="chips" id="roomChips"></div>
+  </div>
+
+  <div class="field-group">
+   <div class="field-label">Must-Have Amenities</div>
+   <div class="chips" id="amenityChips"></div>
+  </div>
+
+  <button type="submit" class="btn-submit">Find Best Matches</button>
+ </form>
+
+ <main>
+  <div class="control-bar">
+   <div class="tabs">
+    <button class="tab-btn active" id="tAll" onclick="switchTab('match')" type="button">🎯 Matches</button>
+    <button class="tab-btn" id="tSave" onclick="switchTab('save')" type="button">🔖 Shortlist (<span id="sc">0</span>)</button>
+    <button class="tab-btn" id="tMap" onclick="switchTab('map')" type="button">🗺️ Map View</button>
+   </div>
+   <div>
+    <select id="sortSelect" class="sort-select">
+     <option value="match">Sort by: Best Match</option>
+     <option value="price">Sort by: Lowest Price</option>
+     <option value="rating">Sort by: Highest Rating</option>
+     <option value="distance">Sort by: Nearest First</option>
+    </select>
+   </div>
+  </div>
+
+  <div id="countBar" style="font-size:0.9rem;color:var(--mute);margin-bottom:14px;font-weight:600"></div>
+
+  <div class="results-grid" id="list"></div>
+  <div id="map" hidden></div>
+ </main>
+</div>
+
+<!-- Comparison Floating Bar -->
+<div class="comp-bar" id="compBar">
+ <span>⚖️ <b id="compText">0 Hostels Selected</b></span>
+ <button class="btn-action primary" onclick="openCompModal()">View Comparison</button>
+</div>
+
+<!-- Detail & Enquiry Modal -->
+<dialog id="dlgDetail"></dialog>
+
+<!-- Comparison Modal -->
+<dialog id="dlgComp"></dialog>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const ROOMS={{ rooms|tojson }}, AMENITIES={{ amenities|tojson }};
+const label=s=>s.replace(/_/g," ").replace(/^./,c=>c.toUpperCase());
+const $=id=>document.getElementById(id);
+const cid=localStorage.cid||(localStorage.cid=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random()));
+const H={"Content-Type":"application/json","X-Client-Id":cid};
+
+let results=[], saved=new Set(), compareSet=new Set(), view="match", activeGender="", lastPrefs=null;
+
+// Toast System
+function toast(msg){
+ const c=$("toast-container");
+ const t=document.createElement("div");
+ t.className="toast";
+ t.innerHTML=`<span>✨</span> ${msg}`;
+ c.appendChild(t);
+ setTimeout(()=>t.remove(),3000);
+}
+
+// Theme Toggle
+const themeBtn=$("themeToggle");
+function setTheme(t){
+ document.documentElement.setAttribute("data-theme",t);
+ localStorage.theme=t;
+ $("themeIcon").textContent=t==="dark"?"☀️":"🌙";
+ $("themeLabel").textContent=t==="dark"?"Light Mode":"Dark Mode";
+}
+themeBtn.onclick=()=>setTheme(document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark");
+if(localStorage.theme) setTheme(localStorage.theme);
+
+// Populate Chips
+$("roomChips").innerHTML=ROOMS.map(r=>`<label><input type="checkbox" name="rooms" value="${r}"><span>${label(r)}</span></label>`).join("");
+$("amenityChips").innerHTML=AMENITIES.map(a=>`<label><input type="checkbox" name="ams" value="${a}"><span>${label(a)}</span></label>`).join("");
+
+const checked=n=>[...document.querySelectorAll(`input[name=${n}]:checked`)].map(e=>e.value);
+const inr=n=>"₹"+n.toLocaleString("en-IN");
+const sync=()=>{$("bv").textContent=inr(+$("budget").value);$("dv").textContent=$("dist").value+" km"};
+$("budget").oninput=$("dist").oninput=sync; sync();
+
+function setGenderFilter(g,el){
+ activeGender=g;
+ document.querySelectorAll(".gender-pill").forEach(p=>p.classList.remove("active"));
+ el.classList.add("active");
+ search();
+}
+
+function resetFilters(){
+ $("prefForm").reset();
+ $("qSearch").value="";
+ sync();
+ search();
+ toast("Filters reset to default");
+}
+
+function renderGauge(score){
+ const r=26, c=2*Math.PI*r;
+ const offset=c-(score/100)*c;
+ return `<div class="match-gauge">
+  <svg viewBox="0 0 60 60">
+   <circle class="match-bg" cx="30" cy="30" r="${r}"/>
+   <circle class="match-val" cx="30" cy="30" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${offset}"/>
+  </svg>
+  <div class="match-text">${score}%</div>
+ </div>`;
+}
+
+function card(h){
+ const isSaved=saved.has(h.id);
+ const isComp=compareSet.has(h.id);
+ return `<article class="card">
+  <div class="card-img-wrap">
+   <img src="${h.cover_image}" alt="${h.name}">
+   <div class="badge-verified">✓ Verified</div>
+   <div class="badge-gender">${h.gender}</div>
+  </div>
+  <div class="card-body">
+   <h3>${h.name}</h3>
+   <div class="card-meta">
+    <span>📍 ${h.area} (${h.distance_km} km)</span>
+    <span>★ ${h.rating}</span>
+    <span>🛡️ Safety ${h.safety_score}/5</span>
+   </div>
+   <div class="card-price">From ${inr(h.price)} <small style="font-size:0.8rem;color:var(--mute);font-weight:600">/mo</small></div>
+   <div class="amenities-list">
+    ${h.amenities.slice(0,5).map(a=>`<span class="tag">${label(a)}</span>`).join("")}
+    ${(h.missing_amenities||[]).map(a=>`<span class="tag miss">No ${label(a)}</span>`).join("")}
+   </div>
+  </div>
+  <div class="card-side">
+   ${renderGauge(h.match||0)}
+   <div class="card-actions">
+    <button class="btn-action primary" onclick="openDetail(${h.id})">Details & Book</button>
+    <button class="btn-action ${isComp?'primary':''}" onclick="toggleCompare(${h.id})">${isComp?'✓ Comparing':'+ Compare'}</button>
+    <button class="btn-action ${isSaved?'saved':''}" onclick="toggleSave(${h.id})">${isSaved?'♥ Saved':'♡ Save'}</button>
+   </div>
+  </div>
+ </article>`;
+}
+
+let map, layer;
+function drawMap(list){
+ $("map").hidden=false;
+ if(!window.L){$("map").textContent="Map loading error.";return}
+ if(!map){
+  map=L.map("map");
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map);
+  layer=L.layerGroup().addTo(map);
+ }
+ layer.clearLayers();
+ const pts=[];
+ list.filter(h=>h.lat!=null).forEach(h=>{
+  pts.push([h.lat,h.lng]);
+  L.marker([h.lat,h.lng]).addTo(layer).bindPopup(`
+   <div style="font-family:sans-serif">
+    <b>${h.name}</b><br>
+    ${h.match!=null?h.match+"% match · ":""}From ${inr(h.price)}/mo<br>
+    <button onclick="openDetail(${h.id})" style="margin-top:6px;padding:4px 8px;background:var(--primary);color:#fff;border:0;border-radius:6px;cursor:pointer">View Details</button>
+   </div>
+  `);
+ });
+ map.invalidateSize();
+ pts.length?map.fitBounds(pts,{padding:[30,30]}):map.setView([19.0760,72.8777],12);
+}
+
+function render(){
+ const list=view==="save"?results.filter(h=>saved.has(h.id)):results.filter(h=>h.match!=null);
+ $("list").hidden=view==="map";
+ $("map").hidden=view!=="map";
+ if(view==="map") drawMap(list);
+ 
+ $("sc").textContent=saved.size;
+ $("compCount").textContent=compareSet.size;
+ $("compText").textContent=`${compareSet.size} Hostel${compareSet.size===1?'':'s'} Selected`;
+ $("compBar").style.display=compareSet.size>0?'flex':'none';
+
+ $("countBar").textContent=view==="match"&&lastPrefs?`Showing ${list.length} hostel${list.length===1?'':'s'} matching your parameters.`:'';
+ $("list").innerHTML=list.length?list.map(card).join(''):`<div class="empty-box"><h3>No hostels found</h3><p style="margin-top:6px">Try increasing your budget or commute distance slider.</p></div>`;
+}
+
+async function search(){
+ lastPrefs={
+  budget:+$("budget").value,
+  max_distance:+$("dist").value,
+  rooms:checked("rooms"),
+  amenities:checked("ams"),
+  gender:activeGender,
+  q:$("qSearch").value,
+  sort:$("sortSelect").value
+ };
+ const res=await fetch("/api/recommend",{method:"POST",headers:H,body:JSON.stringify(lastPrefs)});
+ const d=await res.json();
+ const extra=results.filter(h=>h.match==null&&saved.has(h.id));
+ results=(d.results||[]).concat(extra);
+ render();
+}
+
+async function loadSaved(){
+ const d=await(await fetch("/api/shortlist",{headers:H})).json();
+ saved=new Set((d.results||[]).map(h=>h.id));
+ (d.results||[]).forEach(h=>{if(!results.find(x=>x.id===h.id))results.push({...h,match:null})});
+ render();
+}
+
+async function toggleSave(id){
+ const on=saved.has(id);
+ on?saved.delete(id):saved.add(id);
+ render();
+ toast(on?"Removed from shortlist":"Saved to shortlist!");
+ await fetch("/api/shortlist/"+id,{method:on?"DELETE":"POST",headers:H});
+}
+
+function toggleCompare(id){
+ if(compareSet.has(id)){
+  compareSet.delete(id);
+  toast("Removed from comparison");
+ }else{
+  if(compareSet.size>=3){toast("You can compare up to 3 hostels at a time");return}
+  compareSet.add(id);
+  toast("Added to comparison!");
+ }
+ render();
+}
+
+async function openDetail(id){
+ const h=results.find(x=>x.id===id);
+ const full=await(await fetch("/api/hostels/"+id)).json();
+ const b=h&&h.breakdown;
+ const max={budget:25,distance:25,amenities:30,room:10,rating:10};
+
+ $("dlgDetail").innerHTML=`
+  <div class="modal-header">
+   <div>
+    <h2 style="font-size:1.4rem;font-weight:800">${full.name}</h2>
+    <div style="color:var(--mute);font-size:0.9rem;margin-top:2px">📍 ${full.area} · ${full.distance_km} km from campus · ★ ${full.rating}</div>
+   </div>
+   <button class="modal-close" onclick="$('dlgDetail').close()">✕</button>
+  </div>
+
+  <div style="height:180px;border-radius:12px;overflow:hidden;margin-bottom:16px">
+   <img src="${full.cover_image}" style="width:100%;height:100%;object-fit:cover" alt="${full.name}">
+  </div>
+
+  <p style="font-size:0.95rem;line-height:1.6;margin-bottom:16px">${full.about}</p>
+
+  <h3 style="font-size:1.05rem;margin-bottom:8px">Room Monthly Rates</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+   ${Object.entries(full.rooms).map(([k,v])=>`<div style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;display:flex;justify-content:space-between"><span>${label(k)}</span><b>${inr(v)}</b></div>`).join("")}
+  </div>
+
+  <h3 style="font-size:1.05rem;margin-bottom:8px">Amenities</h3>
+  <div style="margin-bottom:16px">${full.amenities.map(a=>`<span class="tag">${label(a)}</span>`).join("")}</div>
+
+  ${b?`<h3 style="font-size:1.05rem;margin-bottom:8px">Match Score Breakdown (${h.match}%)</h3>
+  <div style="margin-bottom:20px">${Object.entries(b).map(([k,v])=>`
+   <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:2px"><span>${label(k)}</span><b>${v}/${max[k]}</b></div>
+   <div style="height:6px;background:var(--line);border-radius:4px;overflow:hidden;margin-bottom:8px"><div style="height:100%;background:var(--primary);width:${(v/max[k])*100}%"></div></div>
+  `).join("")}</div>`:''}
+
+  <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
+
+  <h3 style="font-size:1.1rem;margin-bottom:10px">Send Booking Inquiry</h3>
+  <form id="enqForm" onsubmit="sendEnquiry(event,${full.id})">
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+    <input type="text" id="enqName" placeholder="Your Name" required style="padding:10px;border-radius:8px;border:1px solid var(--line)">
+    <input type="tel" id="enqPhone" placeholder="Phone Number" required style="padding:10px;border-radius:8px;border:1px solid var(--line)">
+   </div>
+   <input type="date" id="enqDate" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);margin-bottom:10px">
+   <button type="submit" class="btn-submit" style="margin-top:0">Submit Instant Enquiry</button>
+  </form>
+ `;
+ $("dlgDetail").showModal();
+}
+
+async function sendEnquiry(e,hid){
+ e.preventDefault();
+ const body={
+  hostel_id:hid,
+  name:$("enqName").value,
+  phone:$("enqPhone").value,
+  move_date:$("enqDate").value
+ };
+ const res=await fetch("/api/enquiry",{method:"POST",headers:H,body:JSON.stringify(body)});
+ const d=await res.json();
+ if(res.ok){
+  toast(`Inquiry ${d.code} sent! Manager will call you.`);
+  $("dlgDetail").close();
+ }else{
+  toast(d.error||"Failed to send inquiry");
+ }
+}
+
+function openCompModal(){
+ const selected=results.filter(h=>compareSet.has(h.id));
+ if(!selected.length){toast("Select hostels using '+ Compare' first");return}
+ $("dlgComp").innerHTML=`
+  <div class="modal-header">
+   <h2>Hostel Side-by-Side Comparison</h2>
+   <button class="modal-close" onclick="$('dlgComp').close()">✕</button>
+  </div>
+  <div style="overflow-x:auto">
+   <table style="width:100%;border-collapse:collapse;font-size:0.9rem">
+    <thead>
+     <tr style="border-bottom:2px solid var(--line)">
+      <th style="padding:10px;text-align:left">Feature</th>
+      ${selected.map(h=>`<th style="padding:10px;text-align:center">${h.name}</th>`).join("")}
+     </tr>
+    </thead>
+    <tbody>
+     <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:10px;font-weight:600">Starting Price</td>
+      ${selected.map(h=>`<td style="padding:10px;text-align:center;color:var(--primary);font-weight:800">${inr(h.price)}/mo</td>`).join("")}
+     </tr>
+     <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:10px;font-weight:600">Commute Distance</td>
+      ${selected.map(h=>`<td style="padding:10px;text-align:center">${h.distance_km} km</td>`).join("")}
+     </tr>
+     <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:10px;font-weight:600">Rating</td>
+      ${selected.map(h=>`<td style="padding:10px;text-align:center">★ ${h.rating}</td>`).join("")}
+     </tr>
+     <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:10px;font-weight:600">Safety Score</td>
+      ${selected.map(h=>`<td style="padding:10px;text-align:center">🛡️ ${h.safety_score}/5</td>`).join("")}
+     </tr>
+     <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:10px;font-weight:600">Gender Type</td>
+      ${selected.map(h=>`<td style="padding:10px;text-align:center;text-transform:uppercase">${h.gender}</td>`).join("")}
+     </tr>
+    </tbody>
+   </table>
+  </div>
+ `;
+ $("dlgComp").showModal();
+}
+
+function switchTab(v){
+ view=v;
+ $("tAll").className="tab-btn"+(v==="match"?" active":"");
+ $("tSave").className="tab-btn"+(v==="save"?" active":"");
+ $("tMap").className="tab-btn"+(v==="map"?" active":"");
+ render();
+}
+
+$("prefForm").onsubmit=e=>{e.preventDefault();switchTab("match");search()};
+$("qSearch").oninput=()=>search();
+$("sortSelect").onchange=()=>lastPrefs&&search();
+$("dlgDetail").addEventListener("click",e=>{if(e.target===$("dlgDetail"))$("dlgDetail").close()});
+$("dlgComp").addEventListener("click",e=>{if(e.target===$("dlgComp"))$("dlgComp").close()});
+
+search().then(loadSaved);
+</script>
+</body>
+</html>

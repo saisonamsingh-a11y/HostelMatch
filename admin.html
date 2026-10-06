@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HostelMatch – Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#12263A;--paper:#EDF2F7;--card:#fff;--teal:#0E8F7E;--amber:#E8A33D;--red:#D32F2F;--line:#CBD6E0;--mute:#5B6B7B}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 "Bricolage Grotesque",system-ui,sans-serif}
+header{background:var(--ink);color:#fff;padding:20px;display:flex;justify-content:space-between;align-items:center}
+header h1{margin:0;font-size:1.6rem;font-weight:800}
+header a{color:#B8C7D6;text-decoration:none;font-weight:600}
+header a:hover{color:#fff}
+.wrap{max-width:1000px;margin:20px auto;padding:0 20px;display:grid;grid-template-columns:360px 1fr;gap:20px}
+@media(max-width:768px){.wrap{grid-template-columns:1fr}}
+.box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px}
+h2{margin-top:0;font-size:1.3rem}
+label{display:block;font-weight:600;margin:12px 0 4px;font-size:.9rem}
+input[type=text],input[type=number],textarea,select{width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font:inherit}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chips label{position:relative;margin:0}.chips input{position:absolute;opacity:0}
+.chips span{display:inline-block;padding:4px 10px;border:1px solid var(--line);border-radius:99px;cursor:pointer;font-size:.85rem}
+.chips input:checked+span{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn{background:var(--ink);color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:600;width:100%;margin-top:16px;cursor:pointer}
+.btn-danger{background:var(--red)}
+.h-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.h-item:last-child{border-bottom:0}
+.msg{padding:10px;border-radius:8px;margin-bottom:12px;font-size:.9rem;display:none}
+.msg.err{background:#FDE8E8;color:var(--red)}.msg.ok{background:#E6F4EA;color:var(--teal)}
+</style>
+</head>
+<body>
+<header>
+ <h1>HostelMatch Admin</h1>
+ <a href="/">← Back to Main App</a>
+</header>
+
+<div class="wrap">
+ <div class="box">
+  <h2>Hostel Editor</h2>
+  <div id="status" class="msg"></div>
+  <form id="af">
+   <input type="hidden" id="hid">
+   <label for="ak">Admin Key</label>
+   <input type="password" id="ak" value="change-me" required>
+   
+   <label for="name">Hostel Name</label>
+   <input type="text" id="name" required placeholder="e.g. Scholar's Nest">
+   
+   <label for="area">Area / Location</label>
+   <input type="text" id="area" placeholder="e.g. Near Gate 1">
+   
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div>
+     <label for="dist">Distance (km)</label>
+     <input type="number" id="dist" step="0.1" min="0" required placeholder="1.2">
+    </div>
+    <div>
+     <label for="rating">Rating (0-5)</label>
+     <input type="number" id="rating" step="0.1" min="0" max="5" required placeholder="4.5">
+    </div>
+   </div>
+   
+   <label>Room Rates (₹/mo)</label>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    {% for r in rooms %}
+    <input type="number" id="r_{{r}}" placeholder="{{r|capitalize}} price">
+    {% endfor %}
+   </div>
+   
+   <label>Amenities Offered</label>
+   <div class="chips">
+    {% for a in amenities %}
+    <label><input type="checkbox" name="a_am" value="{{a}}"><span>{{a.replace('_',' ').capitalize()}}</span></label>
+    {% endfor %}
+   </div>
+   
+   <label for="about">About Description</label>
+   <textarea id="about" rows="3" placeholder="Brief description..."></textarea>
+   
+   <button type="submit" class="btn" id="sbtn">Save Hostel</button>
+   <button type="button" class="btn" style="background:var(--mute);margin-top:8px" onclick="resetForm()">Clear Form</button>
+  </form>
+ </div>
+ 
+ <div class="box">
+  <h2>Hostel Directory</h2>
+  <div id="hlist">Loading hostels...</div>
+ </div>
+</div>
+
+<script>
+const ROOMS={{ rooms|tojson }};
+const $=id=>document.getElementById(id);
+const status=(txt,err=false)=>{
+ const s=$("status");
+ s.textContent=txt;
+ s.className="msg "+(err?"err":"ok");
+ s.style.display="block";
+ setTimeout(()=>s.style.display="none",4000);
+};
+
+async function loadHostels(){
+ const d=await(await fetch("/api/hostels")).json();
+ $("hlist").innerHTML=(d.results||[]).map(h=>`
+  <div class="h-item">
+   <div>
+    <strong>${h.name}</strong> (${h.area})<br>
+    <small>${h.distance_km} km · ★ ${h.rating} · Rooms: ${Object.keys(h.rooms).join(", ")}</small>
+   </div>
+   <div>
+    <button onclick="editH(${h.id})" style="padding:4px 8px;cursor:pointer">Edit</button>
+    <button onclick="delH(${h.id})" style="padding:4px 8px;cursor:pointer;color:var(--red)">Delete</button>
+   </div>
+  </div>
+ `).join("") || "<p>No hostels found.</p>";
+}
+
+async function editH(id){
+ const h=await(await fetch("/api/hostels/"+id)).json();
+ $("hid").value=h.id;
+ $("name").value=h.name;
+ $("area").value=h.area;
+ $("dist").value=h.distance_km;
+ $("rating").value=h.rating;
+ $("about").value=h.about||"";
+ ROOMS.forEach(r=>$("r_"+r).value=h.rooms[r]||"");
+ document.querySelectorAll('input[name="a_am"]').forEach(cb=>{
+  cb.checked=h.amenities.includes(cb.value);
+ });
+ $("sbtn").textContent="Update Hostel #"+h.id;
+}
+
+function resetForm(){
+ $("hid").value="";
+ $("af").reset();
+ $("sbtn").textContent="Save Hostel";
+}
+
+async function delH(id){
+ if(!confirm("Delete hostel #"+id+"?")) return;
+ const res=await fetch("/api/admin/hostels/"+id,{
+  method:"DELETE",
+  headers:{"X-Admin-Key":$("ak").value}
+ });
+ const d=await res.json();
+ if(res.ok){ status("Hostel deleted"); loadHostels(); resetForm(); }
+ else{ status(d.error||"Failed to delete",true); }
+}
+
+$("af").onsubmit=async e=>{
+ e.preventDefault();
+ const hid=$("hid").value;
+ const rooms={};
+ ROOMS.forEach(r=>{
+  const val=+$("r_"+r).value;
+  if(val>0) rooms[r]=val;
+ });
+ const ams=[...document.querySelectorAll('input[name="a_am"]:checked')].map(cb=>cb.value);
+ const body={
+  name:$("name").value,
+  area:$("area").value,
+  distance_km:+$("dist").value,
+  rating:+$("rating").value,
+  rooms:rooms,
+  amenities:ams,
+  about:$("about").value
+ };
+ 
+ const url=hid?"/api/admin/hostels/"+hid:"/api/admin/hostels";
+ const method=hid?"PUT":"POST";
+ 
+ const res=await fetch(url,{
+  method:method,
+  headers:{"Content-Type":"application/json","X-Admin-Key":$("ak").value},
+  body:JSON.stringify(body)
+ });
+ const d=await res.json();
+ if(res.ok){
+  status(hid?"Hostel updated!":"Hostel created!");
+  resetForm();
+  loadHostels();
+ }else{
+  status(d.error||"Error saving hostel",true);
+ }
+};
+
+loadHostels();
+</script>
+</body>
+</html>
